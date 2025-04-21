@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,48 +23,63 @@ import { Check, Eye, Save, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 import { Post } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Editor() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryParams = new URLSearchParams(location.search);
   const postId = queryParams.get('id');
-  const [posts, setPosts] = useState(initialPosts);
-  
+
   const emptyPost: Post = {
-    id: uuidv4(),
+    id: "",
     title: "",
     excerpt: "",
     content: "",
-    author: "Jane Doe", // Default author
+    author: user?.email || "Unknown",
     date: new Date().toISOString().split('T')[0],
     status: "draft",
     categories: [] as string[],
     views: 0,
-    readTime: 3
+    readTime: 3,
   };
-  
+
   const [post, setPost] = useState<Post>(emptyPost);
   const [selectedTab, setSelectedTab] = useState("edit");
   const [saving, setSaving] = useState(false);
   const isEditing = !!postId;
 
   useEffect(() => {
-    if (postId) {
-      const existingPost = initialPosts.find(p => p.id === postId);
-      if (existingPost) {
-        setPost(existingPost);
+    if (!user) return;
+    // fetch post from supabase if editing
+    async function fetchPost() {
+      if (postId) {
+        const { data, error } = await supabase
+          .from("posts")
+          .select("*")
+          .eq("id", postId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (error || !data) {
+          toast({
+            title: "Post not found",
+            description: "The post you're trying to edit doesn't exist.",
+            variant: "destructive"
+          });
+          navigate('/posts');
+        } else {
+          setPost(data);
+        }
       } else {
-        toast({
-          title: "Post not found",
-          description: "The post you're trying to edit doesn't exist.",
-          variant: "destructive"
-        });
-        navigate('/posts');
+        setPost({ ...emptyPost, author: user.email || "Unknown" });
       }
     }
-  }, [postId, navigate]);
+    fetchPost();
+    // eslint-disable-next-line
+  }, [postId, user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -93,40 +107,47 @@ export default function Editor() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
-    
-    // Calculate estimated read time based on content length
     const wordCount = post.content.trim().split(/\s+/).length;
-    const readTime = Math.max(1, Math.ceil(wordCount / 200)); // Assuming 200 words per minute
-    
-    const updatedPost: Post = {
+    const readTime = Math.max(1, Math.ceil(wordCount / 200));
+    const updatedPost: any = {
       ...post,
+      user_id: user?.id,
+      // Exclude "id" for inserts
       readTime,
-      date: isEditing ? post.date : new Date().toISOString().split('T')[0]
+      date: isEditing ? post.date : new Date().toISOString().split('T')[0],
     };
-    
-    // Simulate API call
-    setTimeout(() => {
-      if (isEditing) {
-        // Update existing post
-        setPosts(posts.map(p => p.id === postId ? updatedPost : p));
-        toast({
-          title: "Post updated",
-          description: "Your post has been updated successfully.",
-        });
-      } else {
-        // Add new post
-        setPosts([...posts, updatedPost]);
-        toast({
-          title: "Post created",
-          description: "Your post has been created successfully.",
-        });
-      }
-      
-      setSaving(false);
+    let error: any = null;
+    if (isEditing) {
+      // Update
+      const { error: updateError } = await supabase
+        .from("posts")
+        .update(updatedPost)
+        .eq("id", postId)
+        .eq("user_id", user.id);
+      error = updateError;
+    } else {
+      // Insert
+      const { error: insertError } = await supabase
+        .from("posts")
+        .insert({ ...updatedPost, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      error = insertError;
+    }
+    setSaving(false);
+    if (error) {
+      toast({
+        title: "Error saving post",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: isEditing ? "Post updated" : "Post created",
+        description: isEditing ? "Your post has been updated." : "Your post has been created.",
+      });
       navigate('/posts');
-    }, 1000);
+    }
   };
 
   return (

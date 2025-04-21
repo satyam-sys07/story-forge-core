@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
   DropdownMenu, 
@@ -31,13 +30,37 @@ import {
 } from "lucide-react";
 import { posts as initialPosts, Post } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Posts() {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    async function fetchPosts() {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) {
+        toast({
+          title: "Failed to fetch posts",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        setPosts(data || []);
+      }
+    }
+    fetchPosts();
+  }, [user, toast]);
 
   // Filter posts based on search term and status filter
   const filteredPosts = posts.filter((post) => {
@@ -60,22 +83,40 @@ export default function Posts() {
     }
   };
 
-  const handleDelete = (postId: string) => {
-    setPosts(posts.filter(post => post.id !== postId));
-    toast({
-      title: "Post deleted",
-      description: "The post has been permanently deleted.",
-    });
+  const handleDelete = async (postId: string) => {
+    const { error } = await supabase.from("posts").delete().eq("id", postId);
+    if (error) {
+      toast({
+        title: "Error deleting post",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      setPosts(posts.filter(post => post.id !== postId));
+      toast({
+        title: "Post deleted",
+        description: "The post has been permanently deleted.",
+      });
+    }
   };
 
-  const handleArchive = (postId: string) => {
-    setPosts(posts.map(post => 
-      post.id === postId ? { ...post, status: "archived" } : post
-    ));
-    toast({
-      title: "Post archived",
-      description: "The post has been moved to archives.",
-    });
+  const handleArchive = async (postId: string) => {
+    const { error } = await supabase.from("posts").update({ status: "archived" }).eq("id", postId);
+    if (error) {
+      toast({
+        title: "Error archiving post",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      setPosts(posts.map(post =>
+        post.id === postId ? { ...post, status: "archived" } : post
+      ));
+      toast({
+        title: "Post archived",
+        description: "The post has been moved to archives.",
+      });
+    }
   };
 
   const handleEdit = (postId: string) => {
