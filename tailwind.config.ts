@@ -61,6 +61,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				blog: {
+					purple: {
+						DEFAULT: '#9b87f5',
+						dark: '#6E59A5',
+						light: '#E5DEFF'
+					},
+					gray: {
+						DEFAULT: '#8E9196',
+						dark: '#1A1F2C',
+						light: '#F1F0FB'
+					}
 				}
 			},
 			borderRadius: {
@@ -92,5 +104,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;
