@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,13 +19,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { categories, posts as initialPosts } from "@/data/mockData";
+import { categories } from "@/data/mockData";
 import { Check, Eye, Save, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from 'uuid';
-import { Post } from "@/data/mockData";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { usePost } from "@/hooks/usePost";
+import { PostStatus } from "@/types/post";
+import { CategorySelector } from "@/components/posts/CategorySelector";
 
 export default function Editor() {
   const navigate = useNavigate();
@@ -32,113 +33,52 @@ export default function Editor() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryParams = new URLSearchParams(location.search);
-  const postId = queryParams.get('id');
+  const postId = queryParams.get('id') ?? undefined;
 
-  const emptyPost: Post = {
-    id: "",
-    title: "",
-    excerpt: "",
-    content: "",
-    author: user?.email || "Unknown",
-    date: new Date().toISOString().split('T')[0],
-    status: "draft",
-    categories: [] as string[],
-    views: 0,
-    readTime: 3,
-  };
+  const { post, setPost, loading: postLoading, error, savePost } = usePost(postId);
 
-  const [post, setPost] = useState<Post>(emptyPost);
   const [selectedTab, setSelectedTab] = useState("edit");
   const [saving, setSaving] = useState(false);
   const isEditing = !!postId;
-
-  useEffect(() => {
-    if (!user) return;
-    // fetch post from supabase if editing
-    async function fetchPost() {
-      if (postId) {
-        const { data, error } = await supabase
-          .from("posts")
-          .select("*")
-          .eq("id", postId)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (error || !data) {
-          toast({
-            title: "Post not found",
-            description: "The post you're trying to edit doesn't exist.",
-            variant: "destructive"
-          });
-          navigate('/posts');
-        } else {
-          setPost(data);
-        }
-      } else {
-        setPost({ ...emptyPost, author: user.email || "Unknown" });
-      }
-    }
-    fetchPost();
-    // eslint-disable-next-line
-  }, [postId, user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setPost({
-      ...post,
+    setPost(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
-  const handleStatusChange = (value: "published" | "draft" | "archived") => {
-    setPost({
-      ...post,
+  const handleStatusChange = (value: PostStatus) => {
+    setPost(prev => ({
+      ...prev,
       status: value,
-    });
+    }));
   };
 
   const handleCategoryToggle = (categoryId: string) => {
-    setPost({
-      ...post,
-      categories: post.categories.includes(categoryId)
-        ? post.categories.filter((id) => id !== categoryId)
-        : [...post.categories, categoryId],
-    });
+    setPost(prev => ({
+      ...prev,
+      categories: prev.categories.includes(categoryId)
+        ? prev.categories.filter((id) => id !== categoryId)
+        : [...prev.categories, categoryId],
+    }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     const wordCount = post.content.trim().split(/\s+/).length;
     const readTime = Math.max(1, Math.ceil(wordCount / 200));
-    const updatedPost: any = {
-      ...post,
-      user_id: user?.id,
-      // Exclude "id" for inserts
-      readTime,
-      date: isEditing ? post.date : new Date().toISOString().split('T')[0],
-    };
-    let error: any = null;
-    if (isEditing) {
-      // Update
-      const { error: updateError } = await supabase
-        .from("posts")
-        .update(updatedPost)
-        .eq("id", postId)
-        .eq("user_id", user.id);
-      error = updateError;
-    } else {
-      // Insert
-      const { error: insertError } = await supabase
-        .from("posts")
-        .insert({ ...updatedPost, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
-      error = insertError;
-    }
+    const saveData = { ...post, readTime, author: user?.email || "Unknown" };
+    const { error: saveError, id } = await savePost(saveData, isEditing);
     setSaving(false);
-    if (error) {
+
+    if (saveError) {
       toast({
         title: "Error saving post",
-        description: error.message,
+        description: saveError.message,
         variant: "destructive"
       });
     } else {
@@ -256,19 +196,11 @@ export default function Editor() {
 
           <Card>
             <CardContent className="pt-6">
-              <Label className="mb-3 block">Categories</Label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={post.categories.includes(category.id) ? "default" : "outline"}
-                    onClick={() => handleCategoryToggle(category.id)}
-                    className="mb-2"
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
+              <CategorySelector 
+                categories={categories} 
+                selectedCategories={post.categories}
+                onToggle={handleCategoryToggle}
+              />
             </CardContent>
           </Card>
         </TabsContent>
