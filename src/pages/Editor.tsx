@@ -23,6 +23,7 @@ import { categories, posts as initialPosts } from "@/data/mockData";
 import { Check, Eye, Save, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
+import { Post } from "@/data/mockData";
 
 export default function Editor() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function Editor() {
   const postId = queryParams.get('id');
   const [posts, setPosts] = useState(initialPosts);
   
-  const emptyPost = {
+  const emptyPost: Post = {
     id: uuidv4(),
     title: "",
     excerpt: "",
@@ -45,7 +46,7 @@ export default function Editor() {
     readTime: 3
   };
   
-  const [post, setPost] = useState(emptyPost);
+  const [post, setPost] = useState<Post>(emptyPost);
   const [selectedTab, setSelectedTab] = useState("edit");
   const [saving, setSaving] = useState(false);
   const isEditing = !!postId;
@@ -76,7 +77,7 @@ export default function Editor() {
     });
   };
 
-  const handleStatusChange = (value: string) => {
+  const handleStatusChange = (value: "published" | "draft" | "archived") => {
     setPost({
       ...post,
       status: value,
@@ -99,7 +100,7 @@ export default function Editor() {
     const wordCount = post.content.trim().split(/\s+/).length;
     const readTime = Math.max(1, Math.ceil(wordCount / 200)); // Assuming 200 words per minute
     
-    const updatedPost = {
+    const updatedPost: Post = {
       ...post,
       readTime,
       date: isEditing ? post.date : new Date().toISOString().split('T')[0]
