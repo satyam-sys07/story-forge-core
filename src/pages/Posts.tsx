@@ -10,6 +10,24 @@ import { PostTable } from "@/components/posts/PostTable";
 import { PostFilters } from "@/components/posts/PostFilters";
 import { PostStatus } from "@/types/post";
 
+function PostsToolbar({ onNew, searchTerm, setSearchTerm, statusFilter, setStatusFilter }: {
+  onNew: () => void;
+  searchTerm: string;
+  setSearchTerm: (val: string) => void;
+  statusFilter: PostStatus | null;
+  setStatusFilter: (val: PostStatus | null) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
+      <Button className="flex items-center gap-2" onClick={onNew}>
+        <Plus className="h-4 w-4" />
+        <span>New Post</span>
+      </Button>
+    </div>
+  );
+}
+
 export default function Posts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<PostStatus | null>(null);
@@ -62,13 +80,13 @@ export default function Posts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
-        <Button className="flex items-center gap-2" onClick={() => navigate('/editor')}>
-          <Plus className="h-4 w-4" />
-          <span>New Post</span>
-        </Button>
-      </div>
+      <PostsToolbar 
+        onNew={() => navigate('/editor')} 
+        searchTerm={searchTerm} 
+        setSearchTerm={setSearchTerm} 
+        statusFilter={statusFilter} 
+        setStatusFilter={setStatusFilter} 
+      />
       <PostFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}

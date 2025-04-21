@@ -11,28 +11,46 @@ export type Database = {
     Tables: {
       posts: {
         Row: {
+          author: string | null
+          categories: string[] | null
           content: string | null
           created_at: string
+          excerpt: string | null
           id: string
+          readTime: number | null
+          status: string | null
           title: string
           updated_at: string
           user_id: string
+          views: number | null
         }
         Insert: {
+          author?: string | null
+          categories?: string[] | null
           content?: string | null
           created_at?: string
+          excerpt?: string | null
           id?: string
+          readTime?: number | null
+          status?: string | null
           title: string
           updated_at?: string
           user_id: string
+          views?: number | null
         }
         Update: {
+          author?: string | null
+          categories?: string[] | null
           content?: string | null
           created_at?: string
+          excerpt?: string | null
           id?: string
+          readTime?: number | null
+          status?: string | null
           title?: string
           updated_at?: string
           user_id?: string
+          views?: number | null
         }
         Relationships: []
       }

@@ -27,6 +27,183 @@ import { usePost } from "@/hooks/usePost";
 import { PostStatus } from "@/types/post";
 import { CategorySelector } from "@/components/posts/CategorySelector";
 
+function EditorHeader({
+  isEditing,
+  postTitle,
+  onGoBack,
+  selectedStatus,
+  onChangeStatus,
+  onToggleTab,
+  selectedTab,
+  onSave,
+  saving,
+  saveEnabled,
+}: {
+  isEditing: boolean;
+  postTitle: string;
+  onGoBack: () => void;
+  selectedStatus: PostStatus;
+  onChangeStatus: (value: PostStatus) => void;
+  onToggleTab: () => void;
+  selectedTab: string;
+  onSave: () => void;
+  saving: boolean;
+  saveEnabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={onGoBack}
+          title="Go back to posts"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {isEditing ? `Edit: ${postTitle || "Untitled Post"}` : "New Post"}
+        </h1>
+      </div>
+      <div className="flex items-center gap-2">
+        <Select value={selectedStatus} onValueChange={onChangeStatus}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="published">Published</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          onClick={onToggleTab}
+          title={selectedTab === "edit" ? "Switch to Preview" : "Switch to Edit"}
+        >
+          {selectedTab === "edit" ? (
+            <>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </>
+          ) : (
+            <>
+              <Check className="h-4 w-4 mr-2" />
+              Edit
+            </>
+          )}
+        </Button>
+        <Button onClick={onSave} disabled={!saveEnabled || saving} title="Save Post">
+          {saving ? (
+            "Saving..."
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function EditorContent({
+  post,
+  onInputChange,
+  onCategoryToggle,
+}: {
+  post: ReturnType<typeof usePost>["post"];
+  onInputChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
+  onCategoryToggle: (categoryId: string) => void;
+}) {
+  return (
+    <>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                name="title"
+                value={post.title}
+                onChange={onInputChange}
+                placeholder="Enter post title"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="excerpt">Excerpt</Label>
+              <Textarea
+                id="excerpt"
+                name="excerpt"
+                value={post.excerpt}
+                onChange={onInputChange}
+                placeholder="Brief summary of your post"
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="content">Content</Label>
+              <Textarea
+                id="content"
+                name="content"
+                value={post.content}
+                onChange={onInputChange}
+                placeholder="Write your post content here..."
+                rows={12}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-6">
+          <CategorySelector 
+            categories={categories} 
+            selectedCategories={post.categories}
+            onToggle={onCategoryToggle}
+          />
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+
+function EditorPreview({ post }: { post: ReturnType<typeof usePost>["post"] }) {
+  return (
+    <Card>
+      <CardContent className="prose prose-sm sm:prose-base md:prose-lg max-w-none pt-6">
+        {post.title ? (
+          <>
+            <h1>{post.title}</h1>
+            {post.excerpt && <p className="lead">{post.excerpt}</p>}
+            {post.content ? (
+              <div className="mt-6">{post.content}</div>
+            ) : (
+              <p className="text-muted-foreground">No content yet.</p>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-10">
+            <h3 className="text-lg font-medium">Post Preview</h3>
+            <p className="text-muted-foreground mt-1">
+              Add a title and content to see the preview.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Editor() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,59 +269,18 @@ export default function Editor() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8" 
-            onClick={() => navigate('/posts')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {isEditing ? `Edit: ${post.title || "Untitled Post"}` : "New Post"}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={post.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            onClick={() => setSelectedTab(selectedTab === "edit" ? "preview" : "edit")}
-          >
-            {selectedTab === "edit" ? (
-              <>
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Edit
-              </>
-            )}
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !post.title.trim()}>
-            {saving ? (
-              "Saving..."
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <EditorHeader
+        isEditing={isEditing}
+        postTitle={post.title}
+        onGoBack={() => navigate('/posts')}
+        selectedStatus={post.status}
+        onChangeStatus={handleStatusChange}
+        onToggleTab={() => setSelectedTab(selectedTab === "edit" ? "preview" : "edit")}
+        selectedTab={selectedTab}
+        onSave={handleSave}
+        saving={saving}
+        saveEnabled={!!post.title.trim()}
+      />
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <TabsList className="hidden">
@@ -153,81 +289,15 @@ export default function Editor() {
         </TabsList>
 
         <TabsContent value="edit" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    value={post.title}
-                    onChange={handleInputChange}
-                    placeholder="Enter post title"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="excerpt">Excerpt</Label>
-                  <Textarea
-                    id="excerpt"
-                    name="excerpt"
-                    value={post.excerpt}
-                    onChange={handleInputChange}
-                    placeholder="Brief summary of your post"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="content">Content</Label>
-                  <Textarea
-                    id="content"
-                    name="content"
-                    value={post.content}
-                    onChange={handleInputChange}
-                    placeholder="Write your post content here..."
-                    rows={12}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <CategorySelector 
-                categories={categories} 
-                selectedCategories={post.categories}
-                onToggle={handleCategoryToggle}
-              />
-            </CardContent>
-          </Card>
+          <EditorContent
+            post={post}
+            onInputChange={handleInputChange}
+            onCategoryToggle={handleCategoryToggle}
+          />
         </TabsContent>
 
         <TabsContent value="preview" className="space-y-4">
-          <Card>
-            <CardContent className="prose prose-sm sm:prose-base md:prose-lg max-w-none pt-6">
-              {post.title ? (
-                <>
-                  <h1>{post.title}</h1>
-                  {post.excerpt && <p className="lead">{post.excerpt}</p>}
-                  {post.content ? (
-                    <div className="mt-6">{post.content}</div>
-                  ) : (
-                    <p className="text-muted-foreground">No content yet.</p>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-10">
-                  <h3 className="text-lg font-medium">Post Preview</h3>
-                  <p className="text-muted-foreground mt-1">
-                    Add a title and content to see the preview.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <EditorPreview post={post} />
         </TabsContent>
       </Tabs>
     </div>

@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Post } from "@/types/post";
+import { Post, PostStatus } from "@/types/post";
 
 export function usePost(postId?: string) {
   const { user } = useAuth();
@@ -33,21 +33,33 @@ export function usePost(postId?: string) {
     setError(null);
     const { data, error: fetchError } = await supabase
       .from("posts")
-      .select("*")
+      .select(`
+        id,
+        title,
+        excerpt,
+        content,
+        status,
+        author,
+        created_at,
+        categories,
+        views,
+        "readTime",
+        user_id
+      `)
       .eq("id", postId)
       .eq("user_id", user.id)
       .maybeSingle();
+
     if (fetchError || !data) {
       setError(fetchError?.message || "Post not found");
     } else {
       setPost({
         ...emptyPost,
-        ...data,
         id: data.id,
         title: data.title,
-        content: data.content ?? "",
         excerpt: data.excerpt ?? "",
-        status: data.status ?? "draft",
+        content: data.content ?? "",
+        status: (data.status as PostStatus) ?? "draft",
         author: data.author ?? user.email ?? "Unknown",
         date: data.created_at ? data.created_at.substring(0, 10) : "",
         categories: data.categories ?? [],
@@ -70,7 +82,14 @@ export function usePost(postId?: string) {
       const { error: updateError } = await supabase
         .from("posts")
         .update({
-          ...values,
+          title: values.title,
+          excerpt: values.excerpt,
+          content: values.content,
+          status: values.status,
+          author: values.author,
+          categories: values.categories,
+          views: values.views,
+          readTime: values.readTime,
           updated_at: now,
         })
         .eq("id", values.id)
@@ -80,7 +99,14 @@ export function usePost(postId?: string) {
       const { error: insertError, data } = await supabase
         .from("posts")
         .insert({
-          ...values,
+          title: values.title,
+          excerpt: values.excerpt,
+          content: values.content,
+          status: values.status,
+          author: values.author,
+          categories: values.categories,
+          views: values.views,
+          readTime: values.readTime,
           created_at: now,
           updated_at: now,
           user_id: user?.id,

@@ -16,20 +16,32 @@ export function usePosts() {
     setError(null);
     const { data, error: fetchError } = await supabase
       .from("posts")
-      .select("*")
+      .select(`
+        id,
+        title,
+        excerpt,
+        content,
+        status,
+        author,
+        created_at,
+        categories,
+        views,
+        "readTime",
+        user_id
+      `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+
     if (fetchError) {
       setError(fetchError.message);
       setPosts([]);
     } else {
-      // Adapt DB response to app Post type
       setPosts(
         (data || []).map((row: any) => ({
           id: row.id,
           title: row.title,
-          content: row.content ?? "",
           excerpt: row.excerpt ?? "",
+          content: row.content ?? "",
           status: row.status ?? "draft",
           author: row.author ?? user.email ?? "Unknown",
           date: row.created_at ? row.created_at.substring(0, 10) : "",
