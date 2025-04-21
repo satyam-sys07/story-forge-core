@@ -11,6 +11,8 @@ import Editor from "./pages/Editor";
 import Archive from "./pages/Archive";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import Home from "./pages/Home";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/home" element={<Home />} />
+          <Route path="/blog/:id" element={<BlogPost />} />
+
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/posts" element={<Layout><Posts /></Layout>} />
           <Route path="/categories" element={<Layout><Categories /></Layout>} />
