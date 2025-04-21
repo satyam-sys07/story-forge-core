@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,20 +19,52 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { categories } from "@/data/mockData";
-import { Check, Eye, Save } from "lucide-react";
+import { categories, posts as initialPosts } from "@/data/mockData";
+import { Check, Eye, Save, ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Editor() {
-  const [post, setPost] = useState({
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+  const queryParams = new URLSearchParams(location.search);
+  const postId = queryParams.get('id');
+  const [posts, setPosts] = useState(initialPosts);
+  
+  const emptyPost = {
+    id: uuidv4(),
     title: "",
     excerpt: "",
     content: "",
+    author: "Jane Doe", // Default author
+    date: new Date().toISOString().split('T')[0],
     status: "draft",
     categories: [] as string[],
-  });
-
+    views: 0,
+    readTime: 3
+  };
+  
+  const [post, setPost] = useState(emptyPost);
   const [selectedTab, setSelectedTab] = useState("edit");
   const [saving, setSaving] = useState(false);
+  const isEditing = !!postId;
+
+  useEffect(() => {
+    if (postId) {
+      const existingPost = initialPosts.find(p => p.id === postId);
+      if (existingPost) {
+        setPost(existingPost);
+      } else {
+        toast({
+          title: "Post not found",
+          description: "The post you're trying to edit doesn't exist.",
+          variant: "destructive"
+        });
+        navigate('/posts');
+      }
+    }
+  }, [postId, navigate]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -61,18 +94,56 @@ export default function Editor() {
 
   const handleSave = () => {
     setSaving(true);
+    
+    // Calculate estimated read time based on content length
+    const wordCount = post.content.trim().split(/\s+/).length;
+    const readTime = Math.max(1, Math.ceil(wordCount / 200)); // Assuming 200 words per minute
+    
+    const updatedPost = {
+      ...post,
+      readTime,
+      date: isEditing ? post.date : new Date().toISOString().split('T')[0]
+    };
+    
     // Simulate API call
     setTimeout(() => {
+      if (isEditing) {
+        // Update existing post
+        setPosts(posts.map(p => p.id === postId ? updatedPost : p));
+        toast({
+          title: "Post updated",
+          description: "Your post has been updated successfully.",
+        });
+      } else {
+        // Add new post
+        setPosts([...posts, updatedPost]);
+        toast({
+          title: "Post created",
+          description: "Your post has been created successfully.",
+        });
+      }
+      
       setSaving(false);
+      navigate('/posts');
     }, 1000);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {post.title || "New Post"}
-        </h1>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8" 
+            onClick={() => navigate('/posts')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isEditing ? `Edit: ${post.title || "Untitled Post"}` : "New Post"}
+          </h1>
+        </div>
         <div className="flex items-center gap-2">
           <Select value={post.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-32">
@@ -81,6 +152,7 @@ export default function Editor() {
             <SelectContent>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -99,7 +171,7 @@ export default function Editor() {
               </>
             )}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving || !post.title.trim()}>
             {saving ? (
               "Saving..."
             ) : (

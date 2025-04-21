@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -30,11 +30,14 @@ import {
   Clock
 } from "lucide-react";
 import { posts as initialPosts, Post } from "@/data/mockData";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Posts() {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Filter posts based on search term and status filter
   const filteredPosts = posts.filter((post) => {
@@ -57,11 +60,37 @@ export default function Posts() {
     }
   };
 
+  const handleDelete = (postId: string) => {
+    setPosts(posts.filter(post => post.id !== postId));
+    toast({
+      title: "Post deleted",
+      description: "The post has been permanently deleted.",
+    });
+  };
+
+  const handleArchive = (postId: string) => {
+    setPosts(posts.map(post => 
+      post.id === postId ? { ...post, status: "archived" } : post
+    ));
+    toast({
+      title: "Post archived",
+      description: "The post has been moved to archives.",
+    });
+  };
+
+  const handleEdit = (postId: string) => {
+    navigate(`/editor?id=${postId}`);
+  };
+
+  const handleViewPost = (postId: string) => {
+    navigate(`/blog/${postId}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
-        <Button className="flex items-center gap-2">
+        <Button className="flex items-center gap-2" onClick={() => navigate('/editor')}>
           <Plus className="h-4 w-4" />
           <span>New Post</span>
         </Button>
@@ -159,17 +188,21 @@ export default function Posts() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="flex items-center gap-2">
+                          <DropdownMenuItem className="flex items-center gap-2" onClick={() => handleViewPost(post.id)}>
+                            <Eye className="h-4 w-4" />
+                            <span>View</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="flex items-center gap-2" onClick={() => handleEdit(post.id)}>
                             <Edit className="h-4 w-4" />
                             <span>Edit</span>
                           </DropdownMenuItem>
                           {post.status !== "archived" && (
-                            <DropdownMenuItem className="flex items-center gap-2">
+                            <DropdownMenuItem className="flex items-center gap-2" onClick={() => handleArchive(post.id)}>
                               <Archive className="h-4 w-4" />
                               <span>Archive</span>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="flex items-center gap-2 text-destructive focus:text-destructive">
+                          <DropdownMenuItem className="flex items-center gap-2 text-destructive focus:text-destructive" onClick={() => handleDelete(post.id)}>
                             <Trash2 className="h-4 w-4" />
                             <span>Delete</span>
                           </DropdownMenuItem>

@@ -1,5 +1,5 @@
 
-import { Book, BookOpen, Archive, Edit, Home, User, FileText, Tags } from "lucide-react"
+import { Book, BookOpen, Archive, Edit, Home, User, FileText, Tags, Globe } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import {
@@ -63,6 +63,15 @@ export function AppSidebar() {
                   <Link to="/categories" className="flex items-center gap-3">
                     <Tags className="h-5 w-5" />
                     <span>Categories</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link to="/home" className="flex items-center gap-3" target="_blank" rel="noopener noreferrer">
+                    <Globe className="h-5 w-5" />
+                    <span>View Blog</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
