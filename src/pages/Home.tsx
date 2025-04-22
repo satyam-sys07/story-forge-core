@@ -8,6 +8,18 @@ const Home = () => {
 
   return (
     <div className="py-10 px-4 max-w-4xl mx-auto">
+      {/* Navbar */}
+      <nav className="w-full flex justify-between items-center mb-8">
+        <Link to="/" className="text-2xl font-bold text-primary">
+          BlogForge
+        </Link>
+        <Link
+          to="/"
+          className="rounded px-4 py-2 bg-primary text-white font-semibold hover:bg-primary/80 transition"
+        >
+          Dashboard
+        </Link>
+      </nav>
       <h1 className="text-4xl font-bold mb-8 text-center text-primary animate-fade-in">BlogForge</h1>
       <div className="grid gap-6">
         {loading && (
