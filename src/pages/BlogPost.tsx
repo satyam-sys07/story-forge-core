@@ -1,15 +1,79 @@
 
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { posts } from "@/data/mockData";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Post } from "@/types/post";
 
 const BlogPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const post = posts.find(p => p.id === id && p.status === "published");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [post, setPost] = useState<Post | null>(null);
 
-  if (!post) {
+  useEffect(() => {
+    const fetchPost = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: fetchError } = await supabase
+        .from("posts")
+        .select(`
+          id,
+          title,
+          excerpt,
+          content,
+          status,
+          author,
+          created_at,
+          categories,
+          views,
+          "readTime",
+          user_id
+        `)
+        .eq("id", id)
+        .eq("status", "published")
+        .maybeSingle();
+
+      if (fetchError || !data) {
+        console.error("Error fetching post:", fetchError?.message || "Post not found");
+        setError(fetchError?.message || "Post not found");
+        setPost(null);
+      } else {
+        setPost({
+          id: data.id,
+          title: data.title,
+          excerpt: data.excerpt ?? "",
+          content: data.content ?? "",
+          status: data.status ?? "published",
+          author: data.author ?? "Unknown",
+          date: data.created_at ? data.created_at.substring(0, 10) : "",
+          categories: data.categories ?? [],
+          views: data.views ?? 0,
+          readTime: data.readTime ?? 1,
+          user_id: data.user_id,
+        });
+      }
+      
+      setLoading(false);
+    };
+
+    fetchPost();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto pt-16 text-center animate-fade-in">
+        <p className="mb-8 text-lg">Loading blog post...</p>
+      </div>
+    );
+  }
+
+  if (error || !post) {
     return (
       <div className="max-w-2xl mx-auto pt-16 text-center animate-fade-in">
         <p className="mb-8 text-lg text-destructive">Blog post not found.</p>
