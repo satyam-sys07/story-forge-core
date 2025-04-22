@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Post } from "@/types/post";
+import { Post, PostStatus } from "@/types/post";
 
 const BlogPost = () => {
   const { id } = useParams();
@@ -49,7 +49,7 @@ const BlogPost = () => {
           title: data.title,
           excerpt: data.excerpt ?? "",
           content: data.content ?? "",
-          status: data.status ?? "published",
+          status: (data.status as PostStatus) ?? "published",
           author: data.author ?? "Unknown",
           date: data.created_at ? data.created_at.substring(0, 10) : "",
           categories: data.categories ?? [],
